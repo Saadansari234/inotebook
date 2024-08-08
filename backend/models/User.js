@@ -22,5 +22,9 @@ const UserSchema= new Schema({
     },
 })
 
-module.exports= mongoose.model('user', UserSchema )
+const User= mongoose.model('user', UserSchema )
+// its to verify if the sended data is already existed in mongo
+User.createIndexes()
+
+module.exports=  User
 
