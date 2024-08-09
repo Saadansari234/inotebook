@@ -5,8 +5,9 @@ const User = require("../models/User")
 const router = express.Router()
 const jwt = require('jsonwebtoken')
 const JWT_secret = 'saadisagoodb$oy'
+const fetchUser= require('../Middleware/fetchuser')
 
-//create a user using post using /api/auth/createuser
+//Route-1: create a user using post using /api/auth/createuser : no login required
 router.post('/createuser', [
     body('name', 'Enter a valid name').isLength({ min: 3 }),
     body('email', 'Enter a valid email').isEmail(),
@@ -54,7 +55,8 @@ router.post('/createuser', [
 
 
 
-//login a user using post using /api/auth/login
+
+//Route-2: login a user using post using /api/auth/login : no login required
 router.post('/login', [
     body('email', 'Enter a valid email').isEmail(),
     body('password', 'Password cannot be blank').exists(),
@@ -68,7 +70,7 @@ router.post('/login', [
     try {
         // asyncronasly finding that one credential which user entering for login
         const user = await User.findOne({ email });
-        
+
         // if tha data user is not there it will return error .its comparing email and password
         if (!user) {
             return res.status(400).json({ error: "try to ligin with correct credentials" })
@@ -96,4 +98,23 @@ router.post('/login', [
 
 });
 
+
+
+//Route-3: Get loggedin users details using post using /api/auth/getuser :  login required
+router.post('/getuser', fetchUser ,async (req, res) => {
+    try {
+    userId= req.user.id
+   const user= await User.findById(userId).select("-password")
+   res.send(user)
+
+    } catch (error) {
+        console.error(error.message)
+        res.status(500).send("internal server error")
+    }
+
+});
+
 module.exports = router
+
+
+
