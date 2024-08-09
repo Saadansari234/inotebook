@@ -3,8 +3,8 @@ const bcrypt = require('bcryptjs');
 const { validationResult, body } = require('express-validator')
 const User = require("../models/User")
 const router = express.Router()
-const jwt= require('jsonwebtoken')
-const JWT_secret= 'saadisagoodb$oy'
+const jwt = require('jsonwebtoken')
+const JWT_secret = 'saadisagoodb$oy'
 
 //create a user using post using /api/auth/createuser
 router.post('/createuser', [
@@ -28,29 +28,72 @@ router.post('/createuser', [
 
         // hash the password before saving in a real application
         const salt = await bcrypt.genSaltSync(10);
-        const securePassword = await bcrypt.hashSync( req.body.password , salt);
+        const securePassword = await bcrypt.hashSync(req.body.password, salt);
         // reating new user if the user not already existed 
         user = await User.create({
             name: req.body.name,
             email: req.body.email,
-            password:securePassword // Ensure you hash the password before saving in a real application
+            password: securePassword // Ensure you hash the password before saving in a real application
         })
 
-        // 
-        const data= {
-            user:{
+        // generating auth token through jwt authentication where after hashing password and getting all information of user it comes will go to next step of authentication
+        const data = {
+            user: {
                 id: user.id
             }
         }
-        const AuthToken= jwt.sign(data, JWT_secret)
+        const AuthToken = jwt.sign(data, JWT_secret)
         console.log(AuthToken);
-        res.json({AuthToken})
-        // res.json(user)
+        res.json({ AuthToken })
 
     } catch (error) {
-     console.error(error.message)
-     res.status(500).send("some error occured")
+        console.error(error.message)
+        res.status(500).send("internal server error")
     }
+});
+
+
+
+//login a user using post using /api/auth/login
+router.post('/login', [
+    body('email', 'Enter a valid email').isEmail(),
+    body('password', 'Password cannot be blank').exists(),
+], async (req, res) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+        return res.status(400).send({ errors: result.array() });
+    }
+
+    const { email, password } = req.body
+    try {
+        // asyncronasly finding that one credential which user entering for login
+        const user = await User.findOne({ email });
+        
+        // if tha data user is not there it will return error .its comparing email and password
+        if (!user) {
+            return res.status(400).json({ error: "try to ligin with correct credentials" })
+        }
+        // will compare user login password hash with tored user password hash.
+        const comparePassword = await bcrypt.compare(password, user.password)
+        if (!comparePassword) {
+            return res.status(400).json({ error: "try to ligin with correct credentials" })
+
+        }
+        // syncrounasly afetr comparing give his auth token to excess his page
+        const data = {
+            user: {
+                id: user.id
+            }
+        }
+        const AuthToken = jwt.sign(data, JWT_secret)
+        // console.log(AuthToken);
+        res.json({ AuthToken })
+
+    } catch (error) {
+        console.error(error.message)
+        res.status(500).send("internal server error")
+    }
+
 });
 
 module.exports = router
